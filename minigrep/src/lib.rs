@@ -1,3 +1,9 @@
+//! # mygrep
+//!
+//! this is a crate produced during the reading of [the rust book](https://doc.rust-lang.org/book/ch14-02-publishing-to-crates-io.html)
+//!
+//! it implements something like grep
+
 use std::error::Error;
 use std::{fs, env};
 
@@ -8,6 +14,21 @@ pub struct Config {
 }
 
 impl Config {
+    /// loads configuration from parameters and from environment variables
+    ///
+    /// 1. first parameter goes to: **query string**
+    /// 2. second parameter goeas to: **file path** to be searched into
+    ///
+    /// aditionaly the `IGNORE_CASE` environment variable is captured
+    /// only mather if is set or not, ignoring its value
+    ///
+    /// # Usage
+    ///
+    /// ```
+    /// use minigrep::Config;
+    /// use std::env;
+    /// let config = Config::build(env::args());
+    /// ```
     pub fn build (mut args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
 
         let _executable_name = args.next();
@@ -29,6 +50,7 @@ impl Config {
 }
 
 pub fn run (config: Config) -> Result <(), Box<dyn Error>> {
+    //! executable for searching
     let contents = fs::read_to_string(config.file_path)?;
 
     let result = if config.ignore_case {
@@ -44,26 +66,19 @@ pub fn run (config: Config) -> Result <(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn search<'a> (query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut results = Vec::new();
-    for line in contents.lines() {
-        if line.contains(query) {
-            results.push(line);
-        }
-    }
-    results
+fn search<'a> (query: &str, contents: &'a str) -> Vec<&'a str> {
+    contents
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
 }
 
-pub fn  search_case_insensitive <'a> (query: &str, contents: &'a str) -> Vec<&'a str> {
-    let mut results = Vec::new();
+fn  search_case_insensitive <'a> (query: &str, contents: &'a str) -> Vec<&'a str> {
     let query = query.to_lowercase();
-
-    for line in contents.lines() {
-        if line.to_lowercase().contains(&query) {
-            results.push(line);
-        }
-    }
-    results
+    contents
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query))
+        .collect()
 }
 
 #[cfg(test)]
