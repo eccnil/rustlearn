@@ -2,7 +2,7 @@ fn main (){
     println!("lets start with threads");
     threads();
     messages();
-    //shared state
+    mutex();
     //sinc & send traits
 }
 
@@ -85,5 +85,37 @@ fn messages(){
     for received in rx {
         println!("Got: {received} from a channel of two");
     }
+}
+
+fn mutex(){
+    use std::sync::{Mutex,Arc};
+    use std::thread;
+
+    let m = Mutex::new(5);
+
+    {
+        let mut num = m.lock().unwrap(); //panics if the holder threas paniqued already
+        *num = 6; 
+    }
+
+    println!("m = {:?}", m);
+
+    let counter = Arc::new(Mutex::new(0));
+    let mut handles = vec![];
+
+    for _ in 0..10 {
+        let counter = Arc::clone(&counter);
+        let handle = thread::spawn(move || {
+            let mut num = counter.lock().unwrap();
+            *num += 1;
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    println!("Result: for mutex {}", *counter.lock().unwrap());
 
 }
