@@ -3,7 +3,7 @@ fn main (){
     threads();
     messages();
     mutex();
-    //sinc & send traits
+    sync_and_send();
 }
 
 fn threads() {
@@ -117,5 +117,10 @@ fn mutex(){
     }
 
     println!("Result: for mutex {}", *counter.lock().unwrap());
+
+}
+
+fn sync_and_send() {
+    //use std::marker::{Sync, Send};
 
 }
