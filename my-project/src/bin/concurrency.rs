@@ -95,7 +95,7 @@ fn mutex(){
 
     {
         let mut num = m.lock().unwrap(); //panics if the holder threas paniqued already
-        *num = 6; 
+        *num = 6;
     }
 
     println!("m = {:?}", m);
