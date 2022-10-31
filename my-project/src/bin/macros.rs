@@ -26,3 +26,5 @@ macro_rules! mi_macro {
 fn call_mi_macro(){
     let _v = mi_macro!(2,3,4,5);
 }
+
+
