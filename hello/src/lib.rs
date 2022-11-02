@@ -7,7 +7,7 @@ type Job = Box<dyn FnOnce() + Send + 'static>;
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: Option<mpsc::Sender<Job>>,
 }
 
 impl ThreadPool {
@@ -23,6 +23,7 @@ impl ThreadPool {
         assert!(size > 0);
 
         let (sender, receiver) = mpsc::channel();
+        let sender = Some(sender);
         let receiver = Arc::new(Mutex::new(receiver));
         let mut workers = Vec::with_capacity(size);
         for id in 0..size {
@@ -38,24 +39,47 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        if let Some(sender) = &self.sender{
+            sender.send(job).unwrap();
+        }
+    }
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        println!("Shuting down channel sender");
+        drop(self.sender.take());
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+            if let Some(thread) = worker.thread.take(){
+                thread.join().unwrap();
+            }
+        }
     }
 }
 
 struct Worker{
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
     id: usize,
 }
 
 impl Worker {
     fn new(id:usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let job_closure = move || loop {
-            let job = receiver.lock().unwrap().recv().unwrap();
-            println!("Worker {id} got a job; executing.");
-            job();
+            match receiver.lock().unwrap().recv() {
+                Ok(job) => {
+                    println!("Worker {id} got a job; executing.");
+                    job();
+                },
+                Err(_) => {
+                    println!("Worker {id} disconnected; shutting down.");
+                    break;
+                }
+            }
         };
         let thread = thread::spawn(job_closure);
-        Worker { id, thread }
+        Worker { id, thread: Some(thread) }
     }
 }
 
